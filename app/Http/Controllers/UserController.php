@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Kelurahan; 
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
@@ -105,7 +106,10 @@ class UserController extends Controller
             'breastfeeding_date' => 'nullable|date|after_or_equal:pregnancy_date',
             'daily_goal' => 'nullable|numeric|min:0.1',
             'waktu_mulai' => 'nullable|date_format:H:i:s',
-            'waktu_selesai' => 'nullable|date_format:H:i:s|after:waktu_mulai',
+            'waktu_selesai' => 'nullable|date_format:H:i:s',
+            'frekuensi_notifikasi' => 'nullable|numeric|min:1',
+            'id_kelurahan' => 'nullable|exists:kelurahan,id',
+            'device_id' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -126,6 +130,9 @@ class UserController extends Controller
         $user->update($request->only([
             'name', 'date_of_birth', 'weight', 'height', 'gender',
             'pregnancy_date', 'breastfeeding_date', 'daily_goal', 'waktu_mulai', 'waktu_selesai',
+            'frekuensi_notifikasi',
+            'id_kelurahan',
+            'device_id'
         ]));
 
         return response()->json([
@@ -136,11 +143,80 @@ class UserController extends Controller
 
     public function getDataUser($id)
     {
-        $user = User::find($id);
+        $user = User::with([
+            'kelurahan.kecamatan.kota.provinsi'
+        ])->find($id);
 
         if (!$user) {
             return response()->json([
                 'message' => 'User tidak ditemukan.',
+            ], 404);
+        }
+
+        $userData = $user->toArray();
+        $userData['daerah'] = null;
+
+        if ($user->kelurahan) {
+            $daerah = [
+                'id_kelurahan' => $user->kelurahan->id,
+                'nama_kelurahan' => $user->kelurahan->nama,
+                'kode_kelurahan' => $user->kelurahan->kode_kelurahan,
+            ];
+
+            if ($user->kelurahan->kecamatan) {
+                $daerah['id_kecamatan'] = $user->kelurahan->kecamatan->id;
+                $daerah['nama_kecamatan'] = $user->kelurahan->kecamatan->nama;
+                $daerah['kode_kecamatan'] = $user->kelurahan->kecamatan->kode_kecamatan;
+
+                if ($user->kelurahan->kecamatan->kota) {
+                    $daerah['id_kota'] = $user->kelurahan->kecamatan->kota->id;
+                    $daerah['nama_kota'] = $user->kelurahan->kecamatan->kota->nama;
+                    $daerah['kode_kota'] = $user->kelurahan->kecamatan->kota->kode_kota;
+
+                    if ($user->kelurahan->kecamatan->kota->provinsi) {
+                        $daerah['id_provinsi'] = $user->kelurahan->kecamatan->kota->provinsi->id;
+                        $daerah['nama_provinsi'] = $user->kelurahan->kecamatan->kota->provinsi->nama;
+                        $daerah['kode_provinsi'] = $user->kelurahan->kecamatan->kota->provinsi->kode_provinsi;
+                    }
+                }
+            }
+
+            if (isset($daerah['kode_provinsi']) && isset($daerah['kode_kota']) && isset($daerah['kode_kecamatan']) && isset($daerah['kode_kelurahan'])) {
+                $daerah['kode_lengkap_wilayah'] = sprintf(
+                    "%s.%s.%s.%s",
+                    $daerah['kode_provinsi'],
+                    $daerah['kode_kota'],
+                    $daerah['kode_kecamatan'],
+                    $daerah['kode_kelurahan']
+                );
+            }
+            $userData['daerah'] = $daerah;
+        }
+
+        return response()->json([
+            'message' => 'Data user ditemukan.',
+            'data' => $userData,
+        ], 200);
+    }
+    
+    public function getUserByRFID(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'rfid_tag' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = User::where('rfid_tag', $request->rfid_tag)->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'User dengan RFID tersebut tidak ditemukan.',
             ], 404);
         }
 

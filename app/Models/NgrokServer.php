@@ -10,6 +10,6 @@ class NgrokServer extends Model
     use HasFactory;
 
     protected $table = 'ngrok_servers';
-    protected $fillable = ['http_url', 'websocket_url'];
+    protected $fillable = ['http_url', 'websocket_url', 'websocket_port'];
     public $timestamps = false;
 }

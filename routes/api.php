@@ -3,10 +3,12 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
+use App\Http\Controllers\SuhuDataController;
 use App\Http\Controllers\SensorDataController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\NgrokServerController;
 use App\Http\Controllers\HydrationController;
+use App\Http\Controllers\WilayahController;
 use App\Events\HelloEvent;
 use App\Events\ModeEvent;
 use App\Events\WeightEvent;
@@ -34,6 +36,8 @@ Route::get('/users/{id}', [UserController::class, 'getDataUser']);
 Route::delete('/users/{id}', [UserController::class, 'deleteUser']);
 Route::post('/forgot-password', [UserController::class, 'forgotPassword']);
 Route::post('/reset-password', [UserController::class, 'resetPassword']);
+Route::post('/users/rfid', [UserController::class, 'getUserByRFID']);
+
 
 //Sensor API
 Route::post('/sensor-data', [SensorDataController::class, 'store']);
@@ -41,6 +45,7 @@ Route::get('/sensor-data/all', [SensorDataController::class, 'getSensorDataByUse
 Route::get('/sensor-data/history', [SensorDataController::class, 'getSensorDataHistoryByUserId']);
 Route::get('/sensor-data/date', [SensorDataController::class, 'getByDate']);
 Route::get('/sensor-data/date-range', [SensorDataController::class, 'getSensorDataByDate']);
+Route::get('/sensor-data/latest-data', [SensorDataController::class, 'getBottleEventToday']);
 
 //NGROK API
 Route::post('/update-ngrok', [NgrokServerController::class, 'update']);
@@ -54,6 +59,20 @@ Route::post("/send-event", function () {
     return response()->json(['status' => 'Event sent']);
 });
 
+//WILAYAH API
+Route::get('/provinsi', [WilayahController::class, 'getAllProvinsi']);
+Route::get('/provinsi/{id_provinsi}/kota', [WilayahController::class, 'getKotaByProvinsi']);
+Route::get('/kota/{id_kota}/kecamatan', [WilayahController::class, 'getKecamatanByKota']);
+Route::get('/kecamatan/{id_kecamatan}/kelurahan', [WilayahController::class, 'getKelurahanByKecamatan']);
+Route::get('/kelurahan/{id_kelurahan}/kode-lengkap', [WilayahController::class, 'getKodeKelurahanLengkap']);
+Route::get('/kelurahan/{id_kelurahan}/daerah', [WilayahController::class, 'getRegionByKelurahanId']);
+
+//SUHU API
+Route::post('/suhu-data', [SuhuDataController::class, 'store']);
+Route::get('/suhu-data/by-date-range', [SuhuDataController::class, 'getByDateRange']);
+Route::get('/suhu-data/all', [SuhuDataController::class, 'getAll']);
+Route::get('/suhu-data/last/{deviceId}', [SuhuDataController::class, 'getLastData']);
+
 Route::post('/send-weight', function (Request $request) {
     $weight = $request->input('weight');
     $message = $request->input('message');
@@ -66,7 +85,8 @@ Route::post('/send-weight', function (Request $request) {
 Route::post('/send-mode', function (Request $request) {
     $message = $request->input('message');
     $user_id = $request->input('user_id');
-    event(new ModeEvent($message, $user_id));
+    $device_id = $request->input('device_id');
+    event(new ModeEvent($message, $user_id, $device_id));
     return response()->json(['status' => 'Data sent']);
 });
 

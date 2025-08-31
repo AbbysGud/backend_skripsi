@@ -16,11 +16,13 @@ class ModeEvent implements ShouldBroadcast
 
     public $message;
     public $user_id;
+    public $device_id;
 
-    public function __construct($message, $user_id)
+    public function __construct($message, $user_id, $device_id)
     {
         $this->message = $message;
         $this->user_id = $user_id;
+        $this->device_id = $device_id;
     }
 
     public function broadcastOn()

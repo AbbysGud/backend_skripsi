@@ -31,6 +31,9 @@ class User extends Authenticatable
         'waktu_mulai',
         'waktu_selesai',
         'rfid_tag',
+        'frekuensi_notifikasi',
+        'id_kelurahan',
+        'device_id',
     ];
 
     /**
@@ -54,4 +57,9 @@ class User extends Authenticatable
         'pregnancy_date' => 'date',
         'breastfeeding_date' => 'date',
     ];
+    
+    public function kelurahan()
+    {
+        return $this->belongsTo(Kelurahan::class, 'id_kelurahan');
+    }
 }
